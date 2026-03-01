@@ -1,2 +1,5 @@
 yfinance
 Pillow
+spidev
+gpiozero
+lgpio

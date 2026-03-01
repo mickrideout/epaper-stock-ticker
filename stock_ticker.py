@@ -72,7 +72,7 @@ def build_images(epd, symbol, last_price, change, pct):
     ticker_y = (upper_height - th) // 2
     draw_black.text((ticker_x, ticker_y), symbol, font=ticker_font, fill=0)
 
-    change_text = f'{change:+.2f}  {pct:+.2f}%'
+    change_text = f'${last_price:.2f}  {pct:+.2f}%'
 
     change_font, cw, ch = fit_font(
         change_text,
