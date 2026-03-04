@@ -10,7 +10,7 @@ python3 -m venv epaperenv
 source epaperenv/bin/activate
 cd epaper-stock-ticker
 sudo apt-get update
-sudo apt-get install libjpeg-dev zlib1g-dev libopenblas-dev python3-spidev libfreetype6-dev libjpeg-dev build-essential
+sudo apt-get install libjpeg-dev zlib1g-dev libopenblas-dev python3-spidev libfreetype6-dev libjpeg-dev build-essential python3-numpy python3-pandas python3-pil
 pip install -r requirements.txt
 ```
 
