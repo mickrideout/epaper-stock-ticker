@@ -70,8 +70,6 @@ def build_images(epd, symbol, last_price, change, pct):
     )
     ticker_x = (width - tw) // 2
     ticker_y = (upper_height - th) // 2
-    draw_black.text((ticker_x, ticker_y), symbol, font=ticker_font, fill=0)
-
     change_text = f'${last_price:.2f}  {pct:+.2f}%'
 
     change_font, cw, ch = fit_font(
@@ -86,8 +84,10 @@ def build_images(epd, symbol, last_price, change, pct):
 
     if change < 0:
         draw_red = ImageDraw.Draw(red_img)
+        draw_red.text((ticker_x, ticker_y), symbol, font=ticker_font, fill=0)
         draw_red.text((change_x, change_y), change_text, font=change_font, fill=0)
     else:
+        draw_black.text((ticker_x, ticker_y), symbol, font=ticker_font, fill=0)
         draw_black.text((change_x, change_y), change_text, font=change_font, fill=0)
 
     return black_img, red_img
