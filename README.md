@@ -17,5 +17,5 @@ pip install -r requirements.txt --prefer-binary --extra-index-url https://www.pi
 ## Run
 
 ```
-python stock_ticker.py --duration 5 --driver epd7in5b_V2 --tickers GC=F,SGLP.L,XMWX.L
+python stock_ticker.py --driver epd7in5b_V2 --duration 15 --tickers GC=F,SGLP.L,XMWX.L,EXUS.AX
 ```
