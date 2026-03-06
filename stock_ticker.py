@@ -37,7 +37,11 @@ def fit_font(text, max_width, max_height, font_path, start_size=300):
 
 def get_daily_change(symbol):
     ticker = yf.Ticker(symbol)
-    hist = ticker.history(period='5d')
+    try:
+        hist = ticker.history(period='5d')
+    except Exception as e:
+        logger.error("Error fetching history for %s: %s", symbol, e)
+        return None, None, None
     if len(hist) < 2:
         logger.warning("Insufficient history for %s", symbol)
         return None, None, None
@@ -147,7 +151,10 @@ def main():
     try:
         while True:
             for symbol in tickers:
-                display_ticker(epd, symbol)
+                try:
+                    display_ticker(epd, symbol)
+                except Exception as e:
+                    logger.error("Unexpected error displaying %s: %s", symbol, e)
                 logger.info("Sleeping for %.1f minutes before next ticker", args.duration)
                 time.sleep(duration_seconds)
     except KeyboardInterrupt:
