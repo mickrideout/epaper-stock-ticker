@@ -74,7 +74,13 @@ def build_images(epd, symbol, last_price, change, pct):
     )
     ticker_x = (width - tw) // 2
     ticker_y = (upper_height - th) // 2
-    change_text = f'${last_price:.2f}  {pct:+.2f}%'
+    if symbol.upper().endswith('.L'):
+        currency = '£'
+    elif symbol.upper().endswith('.AX'):
+        currency = 'A$'
+    else:
+        currency = '$'
+    change_text = f'{currency}{last_price:.2f}  {pct:+.2f}%'
 
     change_font, cw, ch = fit_font(
         change_text,
