@@ -6,6 +6,7 @@ import os
 import sys
 import time
 
+import pandas as pd
 import yfinance as yf
 from PIL import Image, ImageDraw, ImageFont
 
@@ -37,21 +38,51 @@ def fit_font(text, max_width, max_height, font_path, start_size=300):
 
 def get_daily_change(symbol):
     ticker = yf.Ticker(symbol)
+
+    # 1) Prefer fast_info (real-time lastPrice/previousClose) — handles
+    # thin-history ETFs like SGLP.L where history returns only 1 row.
     try:
-        hist = ticker.history(period='10d', raise_errors=True)
+        fi = ticker.fast_info
+        last = fi.get('lastPrice')
+        prev = fi.get('previousClose')
+        if prev is None or (isinstance(prev, float) and pd.isna(prev)):
+            prev = fi.get('regularMarketPreviousClose')
+        if last is not None and prev is not None and not pd.isna(last) and not pd.isna(prev):
+            last_f = float(last)
+            prev_f = float(prev)
+            if prev_f != 0 and last_f != 0:
+                change = last_f - prev_f
+                pct = (change / prev_f) * 100
+                return last_f, change, pct
+    except Exception as e:
+        logger.debug("fast_info failed for %s: %s", symbol, e)
+
+    # 2) Fallback to history (10d covers weekends/long holidays)
+    # Note: raise_errors is deprecated in yfinance >=1.7 — removed.
+    try:
+        hist = ticker.history(period='10d', auto_adjust=False)
     except Exception as e:
         logger.error("Error fetching history for %s: %s", symbol, e)
         return None, None, None
     if hist.empty:
         logger.warning("No history returned for %s — empty dataframe (API failure or invalid symbol)", symbol)
         return None, None, None
+    # yfinance can return a NaN Close for the most recent unsettled bar
+    if 'Close' in hist.columns:
+        n_before = len(hist)
+        hist = hist.dropna(subset=['Close'])
+        if len(hist) != n_before:
+            logger.info("Dropped %d NaN Close row(s) for %s", n_before - len(hist), symbol)
+    if hist.empty:
+        logger.warning("No valid Close data for %s after dropping NaNs", symbol)
+        return None, None, None
     if len(hist) < 2:
-        logger.warning("Insufficient history for %s: only %d trading day(s) returned", symbol, len(hist))
+        logger.warning("Insufficient history for %s: only %d valid trading day(s) returned", symbol, len(hist))
         return None, None, None
     prev_close = hist['Close'].iloc[-2]
     last_close = hist['Close'].iloc[-1]
     change = last_close - prev_close
-    pct = (change / prev_close) * 100
+    pct = (change / prev_close) * 100 if prev_close != 0 else 0
     return last_close, change, pct
 
 
