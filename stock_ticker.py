@@ -38,12 +38,15 @@ def fit_font(text, max_width, max_height, font_path, start_size=300):
 def get_daily_change(symbol):
     ticker = yf.Ticker(symbol)
     try:
-        hist = ticker.history(period='5d')
+        hist = ticker.history(period='10d', raise_errors=True)
     except Exception as e:
         logger.error("Error fetching history for %s: %s", symbol, e)
         return None, None, None
+    if hist.empty:
+        logger.warning("No history returned for %s — empty dataframe (API failure or invalid symbol)", symbol)
+        return None, None, None
     if len(hist) < 2:
-        logger.warning("Insufficient history for %s", symbol)
+        logger.warning("Insufficient history for %s: only %d trading day(s) returned", symbol, len(hist))
         return None, None, None
     prev_close = hist['Close'].iloc[-2]
     last_close = hist['Close'].iloc[-1]
