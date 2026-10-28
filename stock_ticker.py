@@ -17,6 +17,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LIB_DIR = os.path.join(BASE_DIR, 'e-Paper', 'RaspberryPi_JetsonNano', 'python', 'lib')
 FONT_PATH = os.path.join(BASE_DIR, 'e-Paper', 'RaspberryPi_JetsonNano', 'python', 'pic', 'Font.ttc')
 
+FSI_CSV_PATH = '/tmp/fsi.csv'
+FSI_FONT_SIZE = 16
+FSI_MARGIN = 4
+
 if LIB_DIR not in sys.path:
     sys.path.insert(0, LIB_DIR)
 
@@ -86,7 +90,26 @@ def get_daily_change(symbol):
     return last_close, change, pct
 
 
-def build_images(epd, symbol, last_price, change, pct):
+def read_fsi():
+    if not os.path.isfile(FSI_CSV_PATH):
+        logger.info("FSI file %s not available", FSI_CSV_PATH)
+        return None
+    try:
+        df = pd.read_csv(FSI_CSV_PATH)
+        if df.empty:
+            logger.warning("FSI file %s has no data rows", FSI_CSV_PATH)
+            return None
+        value = df['STLFSI4'].iloc[-1]
+        if pd.isna(value):
+            logger.warning("Last FSI entry in %s is empty", FSI_CSV_PATH)
+            return None
+        return value
+    except Exception as e:
+        logger.error("Error reading FSI from %s: %s", FSI_CSV_PATH, e)
+        return None
+
+
+def build_images(epd, symbol, last_price, change, pct, fsi=None):
     width = epd.width
     height = epd.height
 
@@ -134,6 +157,11 @@ def build_images(epd, symbol, last_price, change, pct):
         draw_black.text((ticker_x, ticker_y), symbol, font=ticker_font, fill=0)
         draw_black.text((change_x, change_y), change_text, font=change_font, fill=0)
 
+    if fsi is not None:
+        fsi_draw = ImageDraw.Draw(red_img if change < 0 else black_img)
+        fsi_font = ImageFont.truetype(FONT_PATH, FSI_FONT_SIZE)
+        fsi_draw.text((FSI_MARGIN, FSI_MARGIN), f'FSI:{fsi}', font=fsi_font, fill=0)
+
     return black_img, red_img
 
 
@@ -147,7 +175,8 @@ def display_ticker(epd, symbol):
 
     logger.info("%s  last=%.2f  change=%+.2f  pct=%+.2f%%", symbol, last_price, change, pct)
 
-    black_img, red_img = build_images(epd, symbol, last_price, change, pct)
+    fsi = read_fsi()
+    black_img, red_img = build_images(epd, symbol, last_price, change, pct, fsi)
 
     logger.info("Initialising display for %s", symbol)
     epd.init()
