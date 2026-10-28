@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 import time
+from datetime import datetime
 
 import pandas as pd
 import yfinance as yf
@@ -107,7 +108,7 @@ def read_fsi():
         return None
 
 
-def build_images(epd, symbol, last_price, change, pct, fsi=None):
+def build_images(epd, symbol, last_price, change, pct, updated, fsi=None):
     width = epd.width
     height = epd.height
 
@@ -121,14 +122,6 @@ def build_images(epd, symbol, last_price, change, pct, fsi=None):
 
     padding = 20
 
-    ticker_font, tw, th = fit_font(
-        symbol,
-        width - padding * 2,
-        upper_height - padding * 2,
-        FONT_PATH,
-    )
-    ticker_x = (width - tw) // 2
-    ticker_y = (upper_height - th) // 2
     if symbol.upper().endswith('.L'):
         currency = '£'
     elif symbol.upper().endswith('.AX'):
@@ -149,13 +142,29 @@ def build_images(epd, symbol, last_price, change, pct, fsi=None):
     change_x = (width - cw) // 2
     change_y = upper_height + (lower_height - ch) // 2
 
-    if change < 0:
-        draw_red = ImageDraw.Draw(red_img)
-        draw_red.text((ticker_x, ticker_y), symbol, font=ticker_font, fill=0)
-        draw_red.text((change_x, change_y), change_text, font=change_font, fill=0)
-    else:
-        draw_black.text((ticker_x, ticker_y), symbol, font=ticker_font, fill=0)
-        draw_black.text((change_x, change_y), change_text, font=change_font, fill=0)
+    # Update timestamp line above the ticker, at half the bottom line's font size
+    updated_text = updated.strftime('%Y-%m-%d %H:%M')
+    updated_font = ImageFont.truetype(FONT_PATH, max(8, change_font.size // 2))
+    ubox = updated_font.getbbox(updated_text)
+    uw = ubox[2] - ubox[0]
+    uh = ubox[3] - ubox[1]
+    updated_x = (width - uw) // 2 - ubox[0]
+    updated_y = padding - ubox[1]
+    header_height = padding + uh
+
+    ticker_font, tw, th = fit_font(
+        symbol,
+        width - padding * 2,
+        upper_height - header_height - padding * 2,
+        FONT_PATH,
+    )
+    ticker_x = (width - tw) // 2
+    ticker_y = header_height + (upper_height - header_height - th) // 2
+
+    target = ImageDraw.Draw(red_img) if change < 0 else draw_black
+    target.text((updated_x, updated_y), updated_text, font=updated_font, fill=0)
+    target.text((ticker_x, ticker_y), symbol, font=ticker_font, fill=0)
+    target.text((change_x, change_y), change_text, font=change_font, fill=0)
 
     return black_img, red_img
 
@@ -163,6 +172,7 @@ def build_images(epd, symbol, last_price, change, pct, fsi=None):
 def display_ticker(epd, symbol):
     logger.info("Fetching data for %s", symbol)
     last_price, change, pct = get_daily_change(symbol)
+    updated = datetime.now()
 
     if last_price is None:
         logger.error("Could not fetch data for %s, skipping", symbol)
@@ -171,7 +181,7 @@ def display_ticker(epd, symbol):
     logger.info("%s  last=%.2f  change=%+.2f  pct=%+.2f%%", symbol, last_price, change, pct)
 
     fsi = read_fsi()
-    black_img, red_img = build_images(epd, symbol, last_price, change, pct, fsi)
+    black_img, red_img = build_images(epd, symbol, last_price, change, pct, updated, fsi)
 
     logger.info("Initialising display for %s", symbol)
     epd.init()
