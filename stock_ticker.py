@@ -142,9 +142,9 @@ def build_images(epd, symbol, last_price, change, pct, updated, fsi=None):
     change_x = (width - cw) // 2
     change_y = upper_height + (lower_height - ch) // 2
 
-    # Update timestamp line above the ticker, at half the bottom line's font size
+    # Update timestamp line above the ticker, at the bottom line's font size
     updated_text = updated.strftime('%Y-%m-%d %H:%M')
-    updated_font = ImageFont.truetype(FONT_PATH, max(8, change_font.size // 2))
+    updated_font = change_font
     ubox = updated_font.getbbox(updated_text)
     uw = ubox[2] - ubox[0]
     uh = ubox[3] - ubox[1]
